@@ -44,6 +44,7 @@
             overflow-x: hidden;
             max-width: 100%;
             scrollbar-gutter: stable;
+            scroll-behavior: auto;
         }
 
         body {
@@ -52,6 +53,7 @@
             color: var(--text-dark);
             overflow-x: hidden;
             max-width: 100%;
+            overscroll-behavior-x: none;
             transition: background 0.6s cubic-bezier(0.4, 0, 0.2, 1), color 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             -webkit-tap-highlight-color: transparent;
         }
@@ -104,6 +106,7 @@
             height: 100vh;
             z-index: 0;
             pointer-events: none;
+            transform: translateZ(0);
         }
 
         .content-wrapper {
@@ -1486,14 +1489,21 @@
             };
 
             const animate = () => {
+                requestAnimationFrame(animate);
+                if (mouse.x === null || mouse.y === null) return;
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 drawArrow();
-                requestAnimationFrame(animate);
             };
 
             const onMouseMove = (e) => {
                 mouse.x = e.clientX;
                 mouse.y = e.clientY;
+            };
+
+            const clearPointer = () => {
+                mouse.x = null;
+                mouse.y = null;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
             };
 
             const themeObserver = new MutationObserver(syncArrowColor);
@@ -1504,8 +1514,10 @@
 
             syncArrowColor();
             resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
-            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('resize', resizeCanvas, { passive: true });
+            window.addEventListener('mousemove', onMouseMove, { passive: true });
+            document.documentElement.addEventListener('pointerleave', clearPointer);
+            window.addEventListener('blur', clearPointer);
             animate();
         })();
 
@@ -1558,10 +1570,10 @@
         const canvas = document.getElementById('three-canvas');
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, canvas.offsetWidth / canvas.offsetHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
 
         renderer.setSize(canvas.offsetWidth, canvas.offsetHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
         camera.position.z = 15;
 
         // Neural network nodes
@@ -1638,13 +1650,11 @@
         let targetRotationY = 0;
         let currentRotationY = 0;
 
-        window.addEventListener('scroll', () => {
-            scrollY = window.scrollY;
-            targetRotationY = scrollY * 0.001;
-        });
-
         function animate() {
             requestAnimationFrame(animate);
+
+            scrollY = window.scrollY;
+            targetRotationY = scrollY * 0.001;
 
             currentRotationY += (targetRotationY - currentRotationY) * 0.05;
             scene.rotation.y = currentRotationY;
@@ -1694,87 +1704,71 @@
             camera.aspect = canvas.offsetWidth / canvas.offsetHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(canvas.offsetWidth, canvas.offsetHeight);
-        });
+        }, { passive: true });
 
-        // Work Experience (3D slanted marquee)
-        (function initExperienceMarquee() {
+        // Marquee scroll boost (single scroll listener for all tracks)
+        (function initMarqueeScrollBoost() {
             const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            const track = document.getElementById('xpTrack');
-            if (!track) return;
+            const rows = [];
 
-            // Duplicate items once for seamless looping (CSS animates to -50%).
-            if (!track.dataset.duplicated) {
-                const originals = Array.from(track.children);
-                originals.forEach(node => track.appendChild(node.cloneNode(true)));
-                track.dataset.duplicated = 'true';
-            }
+            (function setupXp() {
+                const track = document.getElementById('xpTrack');
+                if (!track) return;
+                if (!track.dataset.duplicated) {
+                    Array.from(track.children).forEach(node => track.appendChild(node.cloneNode(true)));
+                    track.dataset.duplicated = 'true';
+                }
+                if (reduceMotion) {
+                    track.style.animation = 'none';
+                    track.style.transform = 'none';
+                    return;
+                }
+                const root = track.closest('.xp-marquee');
+                if (root) rows.push({ root, lastY: window.scrollY, boost: 0, raf: 0 });
+            })();
 
-            if (reduceMotion) {
-                track.style.animation = 'none';
-                track.style.transform = 'none';
-                return;
-            }
+            (function setupProjects() {
+                const track = document.getElementById('projectsTrack');
+                if (!track) return;
+                if (!track.dataset.duplicated) {
+                    Array.from(track.children).forEach(node => track.appendChild(node.cloneNode(true)));
+                    track.dataset.duplicated = 'true';
+                }
+                if (reduceMotion) {
+                    track.style.animation = 'none';
+                    track.style.transform = 'none';
+                    return;
+                }
+                const root = track.closest('.projects-marquee');
+                if (root) rows.push({ root, lastY: window.scrollY, boost: 0, raf: 0 });
+            })();
 
-            const root = track.closest('.xp-marquee') || document.documentElement;
-            let lastY = window.scrollY;
-            let boost = 0;
-            let raf = 0;
+            if (!rows.length) return;
 
-            const tick = () => {
-                raf = 0;
-                boost *= 0.88;
-                if (boost < 0.001) boost = 0;
-                root.style.setProperty('--marquee-boost', String(Math.min(1, boost)));
-                if (boost > 0) raf = requestAnimationFrame(tick);
+            const tickRow = (row) => {
+                row.raf = 0;
+                row.boost *= 0.88;
+                if (row.boost < 0.001) row.boost = 0;
+                row.root.style.setProperty('--marquee-boost', String(Math.min(1, row.boost)));
+                if (row.boost > 0) row.raf = requestAnimationFrame(() => tickRow(row));
             };
 
-            window.addEventListener('scroll', () => {
-                const y = window.scrollY;
-                const dy = Math.abs(y - lastY);
-                lastY = y;
-                boost = Math.min(1, boost + dy / 900);
-                if (!raf) raf = requestAnimationFrame(tick);
-            }, { passive: true });
-        })();
-
-        // Featured Projects (3D slanted marquee)
-        (function initProjectsMarquee() {
-            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            const track = document.getElementById('projectsTrack');
-            if (!track) return;
-
-            if (!track.dataset.duplicated) {
-                const originals = Array.from(track.children);
-                originals.forEach(node => track.appendChild(node.cloneNode(true)));
-                track.dataset.duplicated = 'true';
-            }
-
-            if (reduceMotion) {
-                track.style.animation = 'none';
-                track.style.transform = 'none';
-                return;
-            }
-
-            const root = track.closest('.projects-marquee') || document.documentElement;
-            let lastY = window.scrollY;
-            let boost = 0;
-            let raf = 0;
-
-            const tick = () => {
-                raf = 0;
-                boost *= 0.88;
-                if (boost < 0.001) boost = 0;
-                root.style.setProperty('--marquee-boost', String(Math.min(1, boost)));
-                if (boost > 0) raf = requestAnimationFrame(tick);
+            let scrollRaf = 0;
+            const onScroll = () => {
+                if (scrollRaf) return;
+                scrollRaf = requestAnimationFrame(() => {
+                    scrollRaf = 0;
+                    const y = window.scrollY;
+                    rows.forEach((row) => {
+                        const dy = Math.abs(y - row.lastY);
+                        row.lastY = y;
+                        row.boost = Math.min(1, row.boost + dy / 900);
+                        if (!row.raf) row.raf = requestAnimationFrame(() => tickRow(row));
+                    });
+                });
             };
 
-            window.addEventListener('scroll', () => {
-                const y = window.scrollY;
-                const dy = Math.abs(y - lastY);
-                lastY = y;
-                boost = Math.min(1, boost + dy / 900);
-                if (!raf) raf = requestAnimationFrame(tick);
-            }, { passive: true });
+            window.addEventListener('scroll', onScroll, { passive: true });
         })();
 
         // Easter Egg - Konami Code
@@ -1811,7 +1805,7 @@
         });
     </script>
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, startTransition } = React;
 
         // SVG icon components
         const BrainIcon = ({ size = 16 }) => (
@@ -1936,6 +1930,7 @@
             const contentLayerRef = useRef(null);
             const orbitRef = useRef(null);
             const nodeRefs = useRef({});
+            const rotationRef = useRef(0);
 
             const [isDarkTheme, setIsDarkTheme] = useState(
                 () => document.documentElement.getAttribute('data-theme') === 'dark'
@@ -1962,6 +1957,10 @@
                 ro.observe(el);
                 return () => ro.disconnect();
             }, []);
+
+            useEffect(() => {
+                rotationRef.current = rotationAngle;
+            }, [rotationAngle]);
 
             const getRelatedItems = (itemId) => {
                 const item = timelineData.find(i => i.id === itemId);
@@ -2002,10 +2001,15 @@
 
             useEffect(() => {
                 if (!autoRotate) return;
-                const t = setInterval(() => {
-                    setRotationAngle(p => Number(((p + 0.3) % 360).toFixed(3)));
-                }, 50);
-                return () => clearInterval(t);
+                let raf = 0;
+                const loop = () => {
+                    raf = requestAnimationFrame(loop);
+                    rotationRef.current = (rotationRef.current + 0.3) % 360;
+                    const v = Number(rotationRef.current.toFixed(3));
+                    startTransition(() => setRotationAngle(v));
+                };
+                raf = requestAnimationFrame(loop);
+                return () => cancelAnimationFrame(raf);
             }, [autoRotate]);
 
             const calcPos = (index, total) => {
