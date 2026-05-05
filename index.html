@@ -117,9 +117,74 @@
             position: relative;
         }
 
+        /* Infinite Grid background (Option B) */
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.42;
+            background-image:
+                linear-gradient(to right, rgba(0, 128, 255, 0.16) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 128, 255, 0.16) 1px, transparent 1px);
+            background-size: 44px 44px;
+            background-position: 0 0;
+            animation: hero-grid-pan 14s linear infinite;
+            filter: drop-shadow(0 0 18px rgba(0, 163, 255, 0.18));
+        }
+
+        [data-theme="dark"] .hero::before {
+            opacity: 0.55;
+            background-image:
+                linear-gradient(to right, rgba(0, 163, 255, 0.22) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 163, 255, 0.22) 1px, transparent 1px);
+            filter: drop-shadow(0 0 22px rgba(0, 163, 255, 0.22));
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 16% 22%, rgba(0,163,255,0.18), rgba(0,163,255,0) 55%),
+                radial-gradient(circle at 82% 72%, rgba(230,230,250,0.22), rgba(230,230,250,0) 60%);
+            opacity: 0.75;
+        }
+
+        @keyframes hero-grid-pan {
+            from { background-position: 0 0, 0 0; }
+            to { background-position: 44px 44px, 44px 44px; }
+        }
+
+        /* Keep hero content readable, but not blocking the grid */
         .hero-content {
             max-width: 600px;
             position: relative;
+            z-index: 1;
+            padding: 0;
+            border-radius: 0;
+            background: transparent;
+            border: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+
+        [data-theme="dark"] .hero-content {
+            background: transparent;
+            border-color: transparent;
+        }
+
+        /* Improve legibility without a background panel */
+        .hero-label,
+        .hero-tagline {
+            text-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+        }
+
+        .hero-title {
+            filter: drop-shadow(0 12px 36px rgba(0, 0, 0, 0.22));
         }
 
         .hero-label {
@@ -242,12 +307,12 @@
 
         .resume-avatar-wrap {
             position: absolute;
-            left: calc(100% + 12px);
-            top: 50%;
-            transform: translateY(-58%);
-            width: 180px;
-            height: 210px;
-            overflow: hidden;
+            left: 50%;
+            top: calc(100% + 14px);
+            transform: translateX(-50%);
+            width: auto;
+            height: auto;
+            overflow: visible;
             pointer-events: none;
             z-index: 3;
             opacity: 0;
@@ -266,6 +331,29 @@
             filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.2));
         }
 
+        .resume-emoji {
+            width: max-content;
+            height: max-content;
+            display: grid;
+            place-items: center;
+            font-size: clamp(72px, 6vw, 104px);
+            line-height: 1;
+            transform: translateY(-6px);
+            transform-origin: center;
+            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: transform;
+            filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.18));
+            user-select: none;
+        }
+
+        .resume-emoji.is-pop {
+            animation: emoji-pop 520ms cubic-bezier(0.2, 0.9, 0.2, 1);
+        }
+
+        .resume-emoji.is-heart {
+            animation: emoji-heart 650ms cubic-bezier(0.2, 0.9, 0.2, 1);
+        }
+
         .hero-cta.avatar-active + .resume-avatar-wrap,
         .hero-cta:hover + .resume-avatar-wrap,
         .hero-cta:focus-visible + .resume-avatar-wrap {
@@ -276,6 +364,24 @@
         .hero-cta:hover + .resume-avatar-wrap .resume-avatar,
         .hero-cta:focus-visible + .resume-avatar-wrap .resume-avatar {
             transform: translateX(28%);
+        }
+
+        .hero-cta.avatar-active + .resume-avatar-wrap .resume-emoji,
+        .hero-cta:hover + .resume-avatar-wrap .resume-emoji,
+        .hero-cta:focus-visible + .resume-avatar-wrap .resume-emoji {
+            transform: translateY(0);
+        }
+
+        @keyframes emoji-pop {
+            0% { transform: translateY(0) scale(1); }
+            35% { transform: translateY(0) scale(1.18); }
+            100% { transform: translateY(0) scale(1); }
+        }
+
+        @keyframes emoji-heart {
+            0% { transform: translateY(0) scale(1); }
+            45% { transform: translateY(0) scale(1.22) rotate(-6deg); }
+            100% { transform: translateY(0) scale(1) rotate(0deg); }
         }
 
         @keyframes fadeInUp {
@@ -332,79 +438,162 @@
             75%, 100% { transform: scale(2); opacity: 0; }
         }
 
-        /* Experience Timeline */
-        .timeline {
-            max-width: 900px;
-            margin: 3rem 0;
-            position: relative;
+        /* Work Experience 3D Slanted Marquee */
+        .xp-marquee {
+            --tilt-x: 18deg;
+            --tilt-y: -12deg;
+            --marquee-duration: 32s;
+            --marquee-boost: 0; /* updated by JS on scroll */
+            margin-top: 2.5rem;
         }
 
-        .timeline::before {
+        .xp-marquee-plane {
+            position: relative;
+            border-radius: 28px;
+            padding: 2.2rem 1.25rem;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 12% 18%, rgba(0,163,255,0.16), rgba(0,163,255,0) 45%),
+                radial-gradient(circle at 86% 82%, rgba(230,230,250,0.22), rgba(230,230,250,0) 48%),
+                linear-gradient(135deg, rgba(255,255,255,0.26), rgba(255,255,255,0.06));
+            border: 1px solid rgba(0, 163, 255, 0.22);
+            box-shadow: 0 30px 90px rgba(0,0,0,0.16);
+            perspective: 1400px;
+            transform-style: preserve-3d;
+        }
+
+        [data-theme="dark"] .xp-marquee-plane {
+            background:
+                radial-gradient(circle at 12% 18%, rgba(0,163,255,0.14), rgba(0,163,255,0) 45%),
+                radial-gradient(circle at 86% 82%, rgba(230,230,250,0.12), rgba(230,230,250,0) 48%),
+                linear-gradient(135deg, rgba(10,10,15,0.55), rgba(10,10,15,0.18));
+            border-color: rgba(0, 163, 255, 0.28);
+            box-shadow: 0 30px 90px rgba(0,0,0,0.5);
+        }
+
+        /* Soft edge fades */
+        .xp-marquee-plane::before,
+        .xp-marquee-plane::after {
             content: '';
             position: absolute;
-            left: 30px;
             top: 0;
             bottom: 0;
-            width: 3px;
-            background: var(--accent-gradient);
+            width: 120px;
+            z-index: 5;
+            pointer-events: none;
         }
 
-        .timeline-item {
-            position: relative;
-            padding-left: 80px;
-            margin-bottom: 4rem;
-            opacity: 0;
-            transform: translateX(-30px);
-            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        .xp-marquee-plane::before {
+            left: 0;
+            background: linear-gradient(90deg, rgba(255,255,255,0.85), rgba(255,255,255,0));
+            opacity: 0.4;
         }
 
-        .timeline-item.visible {
+        .xp-marquee-plane::after {
+            right: 0;
+            background: linear-gradient(270deg, rgba(255,255,255,0.85), rgba(255,255,255,0));
+            opacity: 0.4;
+        }
+
+        [data-theme="dark"] .xp-marquee-plane::before {
+            background: linear-gradient(90deg, rgba(10,10,15,0.92), rgba(10,10,15,0));
+            opacity: 0.55;
+        }
+        [data-theme="dark"] .xp-marquee-plane::after {
+            background: linear-gradient(270deg, rgba(10,10,15,0.92), rgba(10,10,15,0));
+            opacity: 0.55;
+        }
+
+        .xp-track {
+            display: flex;
+            gap: 1.35rem;
+            width: max-content;
+            padding: 1.1rem 1.25rem;
+            transform:
+                rotateX(var(--tilt-x))
+                rotateY(var(--tilt-y))
+                translateZ(0);
+            transform-style: preserve-3d;
+            will-change: transform;
+            animation: xp-marquee linear infinite;
+            animation-duration: calc(var(--marquee-duration) - (var(--marquee-boost) * 10s));
+        }
+
+        @keyframes xp-marquee {
+            from { transform: translateX(0) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)); }
+            to { transform: translateX(-50%) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)); }
+        }
+
+        .xp-marquee .timeline-item {
+            width: 420px;
+            min-height: 260px;
+            flex: 0 0 auto;
+            transform-style: preserve-3d;
+            transform: translateZ(0);
             opacity: 1;
-            transform: translateX(0);
         }
 
-        .timeline-dot {
+        .xp-marquee .timeline-item:hover {
+            transform: translateZ(18px) scale(1.02);
+        }
+
+        /* Small “portal pin” for each card (reuses timeline-dot) */
+        .xp-marquee .timeline-dot {
             position: absolute;
-            left: 18px;
-            top: 0;
-            width: 28px;
-            height: 28px;
-            background: var(--electric-blue);
-            border: 4px solid var(--white);
-            border-radius: 50%;
-            box-shadow: 0 0 0 4px var(--soft-lavender);
-            z-index: 2;
+            left: 1.35rem;
+            top: 1.35rem;
+            width: 14px;
+            height: 14px;
+            border-radius: 999px;
+            background: radial-gradient(circle at 30% 30%, var(--electric-blue-bright), var(--electric-blue));
+            box-shadow: 0 0 0 7px rgba(0,163,255,0.12), 0 0 26px rgba(0,163,255,0.32);
+            transform: translateZ(16px);
         }
 
-        .timeline-date {
+        .xp-marquee .timeline-date {
             font-family: 'Poppins', sans-serif;
-            font-size: 0.875rem;
-            font-weight: 600;
+            font-size: 0.825rem;
+            font-weight: 700;
             color: var(--electric-blue);
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 0.5rem;
+            letter-spacing: 0.13em;
+            margin-bottom: 0.6rem;
         }
 
-        .timeline-company {
+        .xp-marquee .timeline-company {
             font-family: 'Poppins', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
+            font-size: 1.35rem;
+            font-weight: 800;
             color: var(--text-dark);
             margin-bottom: 0.25rem;
         }
 
-        .timeline-role {
-            font-size: 1.125rem;
+        .xp-marquee .timeline-role {
+            font-size: 1.05rem;
             font-weight: 500;
             color: var(--text-medium);
-            margin-bottom: 1rem;
+            margin-bottom: 0.85rem;
         }
 
-        .timeline-description {
-            font-size: 1rem;
-            line-height: 1.7;
+        .xp-marquee .timeline-description {
+            font-size: 0.98rem;
+            line-height: 1.65;
             color: var(--text-medium);
+        }
+
+        @media (max-width: 968px) {
+            .xp-track { --tilt-x: 14deg; --tilt-y: -8deg; }
+            .xp-marquee .timeline-item { width: 330px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .hero::before { animation: none !important; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .xp-track { animation: none !important; transform: none !important; }
+            .xp-marquee-plane { perspective: none !important; }
+            .xp-marquee .timeline-item { transform: none !important; transition: none !important; }
         }
 
         /* Projects Section */
@@ -745,11 +934,7 @@
                     </svg>
                 </a>
                 <div class="resume-avatar-wrap" aria-hidden="true">
-                    <img
-                        src="file:///Users/mohamedaliakbar/.cursor/projects/Users-mohamedaliakbar-Learnings-PCP-portfolio/assets/Screenshot_2026-05-05_at_9.19.49_PM-c5ea10a7-fab8-44d6-9496-7b5f0821888b.png"
-                        alt=""
-                        class="resume-avatar"
-                    />
+                    <div class="resume-emoji" id="resumeEmoji">🤩</div>
                 </div>
             </div>
         </section>
@@ -773,55 +958,59 @@
         <!-- Experience Section -->
         <section class="experience" id="experience">
             <h2 class="section-title">Work Experience</h2>
-            <div class="timeline">
-                <div class="timeline-item">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-date">May 2025 - Present</div>
-                    <h3 class="timeline-company">Softway</h3>
-                    <div class="timeline-role">Senior Software Engineer (Gen AI – Python)</div>
-                    <p class="timeline-description">
-                        Architect and deliver enterprise Generative AI solutions using Google Vertex AI SDK, LangChain, and Google Agent Development Kit (ADK) for multi-agent systems. Design conversational AI agents with advanced memory, tool-use, and retrieval-augmented generation (RAG) capabilities for complex business workflows.
-                    </p>
-                </div>
+            <div class="xp-marquee" aria-label="Work experience marquee">
+                <div class="xp-marquee-plane">
+                    <div class="xp-track" id="xpTrack">
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-date">May 2025 - Present</div>
+                            <h3 class="timeline-company">Softway</h3>
+                            <div class="timeline-role">Senior Software Engineer (Gen AI – Python)</div>
+                            <p class="timeline-description">
+                                Architect and deliver enterprise Generative AI solutions using Google Vertex AI SDK, LangChain, and Google Agent Development Kit (ADK) for multi-agent systems. Design conversational AI agents with advanced memory, tool-use, and retrieval-augmented generation (RAG) capabilities for complex business workflows.
+                            </p>
+                        </div>
 
-                <div class="timeline-item">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-date">May 2024 - May 2025</div>
-                    <h3 class="timeline-company">Liven (Abacus)</h3>
-                    <div class="timeline-role">Software Engineer</div>
-                    <p class="timeline-description">
-                        Built data pipelines and analytics dashboards with Python and Azure, enabling real-time decision-making for restaurant and retail partners. Developed and maintained .NET microservices with ServiceStack, processing high-throughput transactions across the payment ecosystem.
-                    </p>
-                </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-date">May 2024 - May 2025</div>
+                            <h3 class="timeline-company">Liven (Abacus)</h3>
+                            <div class="timeline-role">Software Engineer</div>
+                            <p class="timeline-description">
+                                Built data pipelines and analytics dashboards with Python and Azure, enabling real-time decision-making for restaurant and retail partners. Developed and maintained .NET microservices with ServiceStack, processing high-throughput transactions across the payment ecosystem.
+                            </p>
+                        </div>
 
-                <div class="timeline-item">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-date">May 2023 - May 2024</div>
-                    <h3 class="timeline-company">Kovai.co</h3>
-                    <div class="timeline-role">Software Engineer</div>
-                    <p class="timeline-description">
-                        Collaborated with the team to bring Gen AI to life, using prompt engineering and the LangChain framework in Python. Migrated in-process function app to isolated setup, boosting performance and reducing dependencies. Integrated Segment.io with Churn360 for seamless data flow.
-                    </p>
-                </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-date">May 2023 - May 2024</div>
+                            <h3 class="timeline-company">Kovai.co</h3>
+                            <div class="timeline-role">Software Engineer</div>
+                            <p class="timeline-description">
+                                Collaborated with the team to bring Gen AI to life, using prompt engineering and the LangChain framework in Python. Migrated in-process function app to isolated setup, boosting performance and reducing dependencies. Integrated Segment.io with Churn360 for seamless data flow.
+                            </p>
+                        </div>
 
-                <div class="timeline-item">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-date">Jul 2022 - May 2023</div>
-                    <h3 class="timeline-company">Kovai.co</h3>
-                    <div class="timeline-role">Junior Software Engineer</div>
-                    <p class="timeline-description">
-                        Designed and developed a built-in usage analytics tool (Data Exchange / ETL). Utilized es-build, TypeScript, Azure function apps, and a Chrome extension for implementation. Implemented comprehensive tracking of user behavior resulting in notable profit increases.
-                    </p>
-                </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-date">Jul 2022 - May 2023</div>
+                            <h3 class="timeline-company">Kovai.co</h3>
+                            <div class="timeline-role">Junior Software Engineer</div>
+                            <p class="timeline-description">
+                                Designed and developed a built-in usage analytics tool (Data Exchange / ETL). Utilized es-build, TypeScript, Azure function apps, and a Chrome extension for implementation. Implemented comprehensive tracking of user behavior resulting in notable profit increases.
+                            </p>
+                        </div>
 
-                <div class="timeline-item">
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-date">Jan 2022 - Jun 2022</div>
-                    <h3 class="timeline-company">Transbotation</h3>
-                    <div class="timeline-role">Software Intern</div>
-                    <p class="timeline-description">
-                        Utilized image processing and NLP algorithms to extract relevant data from bill images and convert it into structured CSV format. Developed a RESTful API to facilitate seamless integration between frontend and backend systems.
-                    </p>
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-date">Jan 2022 - Jun 2022</div>
+                            <h3 class="timeline-company">Transbotation</h3>
+                            <div class="timeline-role">Software Intern</div>
+                            <p class="timeline-description">
+                                Utilized image processing and NLP algorithms to extract relevant data from bill images and convert it into structured CSV format. Developed a RESTful API to facilitate seamless integration between frontend and backend systems.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1170,12 +1359,32 @@
         (function initResumeAvatarPrompt() {
             const cta = document.getElementById('resumeCta');
             if (!cta) return;
+            const emojiEl = document.getElementById('resumeEmoji');
+            if (!emojiEl) return;
+
             const activate = () => cta.classList.add('avatar-active');
             const deactivate = () => cta.classList.remove('avatar-active');
+
+            const setEmoji = (value, animClass) => {
+                emojiEl.textContent = value;
+                if (!animClass) return;
+                emojiEl.classList.remove('is-pop', 'is-heart');
+                void emojiEl.offsetWidth; // restart animation
+                emojiEl.classList.add(animClass);
+            };
+
             cta.addEventListener('mouseenter', activate);
             cta.addEventListener('focus', activate);
             cta.addEventListener('mouseleave', deactivate);
             cta.addEventListener('blur', deactivate);
+
+            cta.addEventListener('mouseenter', () => setEmoji('🤩'));
+            cta.addEventListener('focus', () => setEmoji('🤩'));
+
+            cta.addEventListener('click', () => {
+                setEmoji('😊', 'is-pop');
+                window.setTimeout(() => setEmoji('😍', 'is-heart'), 520);
+            });
         })();
 
         // Theme Toggle
@@ -1334,23 +1543,86 @@
             renderer.setSize(canvas.offsetWidth, canvas.offsetHeight);
         });
 
-        // Timeline scroll reveal
-        const observerOptions = {
-            threshold: 0.2,
-            rootMargin: '0px 0px -100px 0px'
-        };
+        // Work Experience (3D slanted marquee)
+        (function initExperienceMarquee() {
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const track = document.getElementById('xpTrack');
+            if (!track) return;
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
-        }, observerOptions);
+            // Duplicate items once for seamless looping (CSS animates to -50%).
+            if (!track.dataset.duplicated) {
+                const originals = Array.from(track.children);
+                originals.forEach(node => track.appendChild(node.cloneNode(true)));
+                track.dataset.duplicated = 'true';
+            }
 
-        document.querySelectorAll('.timeline-item').forEach(item => {
-            observer.observe(item);
-        });
+            if (reduceMotion) {
+                track.style.animation = 'none';
+                track.style.transform = 'none';
+                return;
+            }
+
+            const root = track.closest('.xp-marquee') || document.documentElement;
+            let lastY = window.scrollY;
+            let boost = 0;
+            let raf = 0;
+
+            const tick = () => {
+                raf = 0;
+                boost *= 0.88;
+                if (boost < 0.001) boost = 0;
+                root.style.setProperty('--marquee-boost', String(Math.min(1, boost)));
+                if (boost > 0) raf = requestAnimationFrame(tick);
+            };
+
+            window.addEventListener('scroll', () => {
+                const y = window.scrollY;
+                const dy = Math.abs(y - lastY);
+                lastY = y;
+                boost = Math.min(1, boost + dy / 900);
+                if (!raf) raf = requestAnimationFrame(tick);
+            }, { passive: true });
+        })();
+
+        // Featured Projects (3D slanted marquee)
+        (function initProjectsMarquee() {
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const track = document.getElementById('projectsTrack');
+            if (!track) return;
+
+            if (!track.dataset.duplicated) {
+                const originals = Array.from(track.children);
+                originals.forEach(node => track.appendChild(node.cloneNode(true)));
+                track.dataset.duplicated = 'true';
+            }
+
+            if (reduceMotion) {
+                track.style.animation = 'none';
+                track.style.transform = 'none';
+                return;
+            }
+
+            const root = track.closest('.projects-marquee') || document.documentElement;
+            let lastY = window.scrollY;
+            let boost = 0;
+            let raf = 0;
+
+            const tick = () => {
+                raf = 0;
+                boost *= 0.88;
+                if (boost < 0.001) boost = 0;
+                root.style.setProperty('--marquee-boost', String(Math.min(1, boost)));
+                if (boost > 0) raf = requestAnimationFrame(tick);
+            };
+
+            window.addEventListener('scroll', () => {
+                const y = window.scrollY;
+                const dy = Math.abs(y - lastY);
+                lastY = y;
+                boost = Math.min(1, boost + dy / 900);
+                if (!raf) raf = requestAnimationFrame(tick);
+            }, { passive: true });
+        })();
 
         // Easter Egg - Konami Code
         let konamiCode = [];
